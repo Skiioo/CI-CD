@@ -19,13 +19,15 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24.18.0
           cache: npm
 
       # Installation propre des dépendances
       # (la step échoue si la commande retourne un code différent de zéro)
       - name: Install dependencies
         run: npm ci
+
+      # Le npm ci lis exlusivement le commande donnée de la clé qui n'est pas écrite
 
       - name: Run tests
         run: npm test

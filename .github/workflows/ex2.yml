@@ -1,0 +1,54 @@
+name: Build manuel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Vérifier le build
+        run: |
+          test -d dist || { echo "Le dossier dist/ n'existe pas"; exit 1; }
+          test -f dist/index.html || { echo "dist/index.html est introuvable"; exit 1; }
+          echo "Build OK"
+
+      - name: Sauvegarder dist/ comme artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+      - name: Résumé du build
+        if: always()
+        run: |
+          echo "## Résumé du build" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Statut : ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Lancé par : ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branche : ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit : ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Run n° : ${{ github.run_number }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Node.js : $(node --version)" >> "$GITHUB_STEP_SUMMARY"
+          if [ -d dist ]; then
+            echo "- Fichiers dans dist/ : $(find dist -type f | wc -l)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Taille de dist/ : $(du -sh dist | cut -f1)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- dist/ absent" >> "$GITHUB_STEP_SUMMARY"
+          fi
