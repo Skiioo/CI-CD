@@ -1,0 +1,42 @@
+# Métadonnées du workflow
+name: CI
+
+# Événement déclencheur : chaque push (nouveau commit)
+on: push
+
+jobs:
+  build:
+    # Chaque job s'exécute dans un runner isolé
+    runs-on: ubuntu-latest
+
+    steps:
+      # Rend le code du dépôt disponible dans le runner
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Prépare Node.js + active le cache npm
+      # (le cache accélère les exécutions, mais ne remplace pas npm ci)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Installation propre des dépendances
+      # (la step échoue si la commande retourne un code différent de zéro)
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      # S'exécute toujours, même après un échec
+      - name: Résumé
+        if: always()
+        run: |
+          echo "## Résumé de l'exécution" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Statut du job : ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Dépôt : ${{ github.repository }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Branche : ${{ github.ref_name }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit : ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Auteur du push : ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
