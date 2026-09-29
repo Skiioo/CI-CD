@@ -1,0 +1,105 @@
+name: Build, Test et Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environnement cible"
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  # 1) On construit UNE SEULE fois
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Sauvegarder dist/
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  # 2) On teste CE MÊME build sur plusieurs configurations
+  test:
+    needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Récupérer le build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Tests
+        run: npm test
+
+  # 3) On déploie le build validé
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    concurrency:
+      group: deploy-${{ inputs.environment }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Récupérer le build
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Déployer
+        run: |
+          echo "Déploiement vers ${{ inputs.environment }}"
+          ls -R dist/
+          # Remplace par ta vraie commande de déploiement (rsync, aws s3 sync, etc.)
+
+      - name: Résumé
+        if: always()
+        run: |
+          echo "## Déploiement" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Environnement : ${{ inputs.environment }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Statut : ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit : ${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Lancé par : ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
