@@ -1,12 +1,14 @@
-# Meta data du workflow 
-name: Hello World 
-# Événement Déclancher 
-on: push: 
+# Métadonnées du workflow
+name: Hello World
 
-# Travaille a effectué 
-jobs: 
-  hello: 
-    run-on: ubuntu-latest 
+# Événement déclencheur
+on:
+  push:
 
-    steps: 
+# Travail à effectuer
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+
+    steps:
       - run: echo "Hello World"
